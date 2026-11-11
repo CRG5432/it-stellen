@@ -340,7 +340,15 @@ footer ul{padding-left:18px;margin:6px 0}
   const VIEW_TABS = ["all", "new", "top"];
   const isView = (t) => VIEW_TABS.includes(t);
   const fitOf = (j) => (j.score >= TOP ? "top" : j.score >= PART ? "teil" : "rest");
-  const topicsOf = (j) => j.topics.length ? j.topics : j.topics_text;
+  // Themen kommen primaer aus dem Titel; Apple und Mac-Umfeld zaehlen auch, wenn sie nur im Text/Arbeitgeber stehen
+  const MAC_ENV = "Mac-Umfeld (Kreativ / Medien / Bildung)", ALWAYS = ["Apple / Jamf", MAC_ENV];
+  const topicsOf = (j) => {
+    if (j._t) return j._t;
+    const main = j.topics.filter((t) => !ALWAYS.includes(t));
+    const base = main.length ? main : j.topics_text.filter((t) => !ALWAYS.includes(t));
+    const extra = ALWAYS.filter((t) => j.topics.includes(t) || j.topics_text.includes(t));
+    return (j._t = [...extra, ...base]);
+  };
 
   /* ---------- Zustand ---------- */
   const DEFAULTS = { topics: [], pensum: [], roles: [], noAgency: false, noSenior: false, permanent: false,
