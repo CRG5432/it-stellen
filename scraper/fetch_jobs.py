@@ -45,6 +45,9 @@ KEYWORDS = [
     "Systemtechniker", "System Engineer", "Systemadministrator", "ICT-Systemspezialist",
     "Informatiker Systemtechnik", "IT-Techniker", "ICT-Techniker", "Client Management",
     "IT-Verantwortlicher", "Informatik Allrounder",
+    # Apple-Umfeld
+    "Apple", "Mac", "Mac Support", "iPad", "Mobile Device Management", "Kandji",
+    "ICT Schule", "Schul-IT", "ICT-Supporter Schule",
 ]
 JOBSCH_REGIONS = [7, 12]          # jobs.ch: 7 = Kanton Zuerich, 12 = Kanton Aargau
 JOBROOM_CANTONS = ["AG", "ZH"]
@@ -182,6 +185,14 @@ TOPICS: list[tuple[str, str]] = [
     ("Cloud / Azure", r"\bazure\b|\baws\b|\bcloud\b"),
     ("Beschaffung / Asset", r"beschaffung|asset[- ]?manag|lifecycle|leasing|procurement|inventar"),
 ]
+
+# Branchen, die oft mit Macs arbeiten (geprueft auf den Arbeitgeber)
+MAC_ENV_RE = re.compile(
+    r"agentur|agency|werbe|design|grafik|medien|\bmedia\b|verlag|zeitung|redaktion|"
+    r"\bfilm|video|fotogra|\bphoto\b|studio|architekt|kreativ|creative|künste|kunst|museum|theater|"
+    r"musik|music|\bnzz\b|tamedia|ringier|\bsrf\b|ch media|tx group|schule|gymnasium|"
+    r"hochschule|\bzhaw\b|\bzhdk\b|\bfhnw\b|\bph\b|apple|\bmac\b", re.I)
+MAC_ENV = "Mac-Umfeld (Kreativ / Medien / Bildung)"
 
 # Profil-Begriffe fuer den Match-Score: (Anzeige, Regex, Gewicht)
 SKILLS: list[tuple[str, str, int]] = [
@@ -578,6 +589,12 @@ def make_job(*, id, source, url, title, employer, place, plz, canton, geo, pmin,
     if pmax is not None and pmin is None:
         pmin = pmax
     score, hits = match_of(title, text)
+    topics = classify(TOPICS, title)
+    topics_text = [t for t in classify(TOPICS, "", text) if t not in topics]
+    if not agency and MAC_ENV_RE.search(employer or ""):
+        topics.append(MAC_ENV)
+        hits.append("Mac-Umfeld")
+        score += 3
     return {
         "id": id, "source": source, "url": url, "apply": apply,
         "title": title, "employer": clean(employer), "place": clean(place), "plz": plz,
@@ -585,8 +602,7 @@ def make_job(*, id, source, url, title, employer, place, plz, canton, geo, pmin,
         "lat": round(geo[0], 4) if geo else None, "lon": round(geo[1], 4) if geo else None,
         "pmin": pmin, "pmax": pmax, "temporary": temporary,
         "role": role_of(title), "level": level_of(title),
-        "topics": classify(TOPICS, title),
-        "topics_text": [t for t in classify(TOPICS, "", text) if t not in classify(TOPICS, title)],
+        "topics": topics, "topics_text": topics_text,
         "score": score, "skills": hits, "agency": bool(agency),
         "published": published, "text": snippet(text or ""),
     }
